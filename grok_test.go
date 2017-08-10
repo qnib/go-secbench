@@ -10,6 +10,7 @@ const (
 	r3 = "[NOTE] 4.2  - Ensure that containers use trusted base images"
 	m1 = "[WARN]      * Running as root: gcollect_agent.2lbtasd6ltpfthys0mpvqng36.q1t9wm4xlykmcvruzme9bncfm"
 )
+
 var (
 	rules = []string{r1,r2,r3}
 	msgs = []string{m1,
@@ -22,26 +23,26 @@ var (
 )
 
 func TestGrok_ParseMsg(t *testing.T) {
-	exp := map[string]string{"level":"WARN", "msg":"Running as root: gcollect_agent.2lbtasd6ltpfthys0mpvqng36.q1t9wm4xlykmcvruzme9bncfm"}
+	exp := map[string]string{"mode":"WARN", "msg":"Running as root: gcollect_agent.2lbtasd6ltpfthys0mpvqng36.q1t9wm4xlykmcvruzme9bncfm"}
 	g := NewGrok()
-	got, err := g.ParseMsg(m1)
+	got, err := g.parseMsg(m1)
 	assert.NoError(t, err, "Should go through")
 	assert.Equal(t, exp, got)
 }
 
 
 func TestGrok_ParseRule1(t *testing.T) {
-	exp := map[string]string{"user":"INFO", "num":"4", "rule":"Container Images and Build File"}
+	exp := map[string]string{"mode":"INFO", "num":"4", "rule":"Container Images and Build File"}
 	g := NewGrok()
-	got, err := g.ParseRule1(r1)
+	got, err := g.parseRule1(r1)
 	assert.NoError(t, err, "Should go through")
 	assert.Equal(t, exp, got)
 }
 
 func TestGrok_ParseRule2(t *testing.T) {
-	exp := map[string]string{"user":"WARN", "num":"4.1", "rule":"Ensure a user for the container has been created"}
+	exp := map[string]string{"mode":"WARN", "num":"4.1", "rule":"Ensure a user for the container has been created"}
 	g := NewGrok()
-	got, err := g.ParseRule2(r2)
+	got, err := g.parseRule2(r2)
 	assert.NoError(t, err, "Should go through")
 	assert.Equal(t, exp, got)
 }
@@ -49,7 +50,7 @@ func TestGrok_ParseRule2(t *testing.T) {
 func TestGrok_ParseMsgs(t *testing.T) {
 	g := NewGrok()
 	for _, msg := range msgs {
-		res, err := g.ParseMsg(msg)
+		res, err := g.parseMsg(msg)
 		assert.NoError(t, err, "Should go through")
 		_, isMsg := res["msg"]
 		_, isRule := res["rule"]
@@ -60,13 +61,14 @@ func TestGrok_ParseMsgs(t *testing.T) {
 func TestGrok_ParseRules(t *testing.T) {
 	g := NewGrok()
 	for _, rule := range rules {
-		res, err := g.ParseRules(rule)
+		res, err := g.parseRules(rule)
 		assert.NoError(t, err, "Should go through")
 		_, isMsg := res["msg"]
 		_, isRule := res["rule"]
 		assert.True(t, isMsg || isRule, "Should be either")
 	}
 }
+
 func TestGrok_ParseLines(t *testing.T) {
 	g := NewGrok()
 	tests := []string{}

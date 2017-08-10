@@ -16,6 +16,7 @@ import (
 	"time"
 	"bufio"
 	"github.com/lunixbochs/vtclean"
+	"github.com/zpatrick/go-config"
 )
 
 const (
@@ -27,21 +28,29 @@ var (
 )
 
 type SecBench struct {
-	cli *client.Client
-	grok Grok
+	cli 	*client.Client
+	parser 	Parser
+	Results ResultSets
+	cfg 	map[string]string
+	skip 	bool
 }
 
-func NewSecBenc() (sb *SecBench, err error) {
+func NewSecBenc(p Parser) (sb *SecBench, err error) {
 	c, err := client.NewEnvClient()
 	if err != nil {
 		return
 	}
-	g := NewGrok()
 	sb = &SecBench{
 		cli: c,
-		grok: g,
+		parser: p,
+		cfg: map[string]string{},
 	}
 	return
+}
+
+func (sb *SecBench) Run(cfg *config.Config) {
+	sb.cfg, _ = cfg.Settings()
+	sb.RunBench()
 }
 
 func (sb *SecBench) RunBench() {
@@ -96,10 +105,9 @@ func (sb *SecBench) RunBench() {
 		log.Printf("Failed to start container: %s", err.Error())
 		return
 	}
-	defer sb.removeContainer(container.ID)
 	// Parse log
 	sb.parseLog(container.ID)
-
+	sb.removeContainer(container.ID)
 }
 
 func (sb *SecBench) removeContainer(cid string) {
@@ -107,6 +115,39 @@ func (sb *SecBench) removeContainer(cid string) {
 	if err != nil {
 		log.Panic(err.Error())
 	}
+}
+func (sb *SecBench) pullImnage() error {
+	cl, err := sb.cli.ImagePull(ctx, "docker/docker-bench-security", types.ImagePullOptions{})
+	defer cl.Close()
+	return err
+}
+
+func (sb *SecBench) parseLine(line string) {
+	nline := vtclean.Clean(line, false)
+	res, err := sb.parser.ParseLine(nline)
+	if err != nil {
+		return
+	}
+	num := ""
+	val, isNum := res["num"]
+
+	if isNum {
+		num = val
+		rule := NewRule(num,res["rule"], res["mode"])
+		sb.skip = rule.Skip(sb.cfg)
+		if !sb.skip {
+			fmt.Printf("Rule  : %s\n", rule.String())
+		}
+		//sb.Results.AddRule(num, res["rule"], "level")
+	} else {
+		if !sb.skip {
+			fmt.Printf("Result: %3s | %5s | %s\n", num, res["mode"], res["msg"])
+		}
+		// Add Instance
+		//sb.Results.AddResult(num, res["mode"], res["msg"])
+	}
+	_ = num
+
 }
 func (sb *SecBench) parseLog(CntID string) {
 	logOpts := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Follow: true, Tail: "any", Timestamps: false}
@@ -120,14 +161,7 @@ func (sb *SecBench) parseLog(CntID string) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
-		nline := vtclean.Clean(line, false)
-		res, err := sb.grok.ParseLine(nline)
-		if err != nil {
-			//fmt.Printf("!! %s > %v\n", err.Error(), nline)
-			continue
-		}
-		fmt.Printf("%v\n", res)
-
+		sb.parseLine(line)
 	}
 	err = scanner.Err()
 	if err != nil {
@@ -136,3 +170,4 @@ func (sb *SecBench) parseLog(CntID string) {
 		return
 	}
 }
+
