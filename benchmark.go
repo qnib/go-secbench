@@ -30,24 +30,30 @@ var (
 type SecBench struct {
 	cli 	*client.Client
 	parser 	Parser
-	Results ResultSets
+	Chan 	chan interface{}
 	cfg 	map[string]string
 	skip 	bool
 }
 
-func NewSecBenc(p Parser) (sb *SecBench, err error) {
-	c, err := client.NewEnvClient()
+func NewSecBenc(p Parser, c chan interface{}) (sb *SecBench, err error) {
+	cli, err := client.NewEnvClient()
 	if err != nil {
 		return
 	}
 	sb = &SecBench{
-		cli: c,
+		cli: cli,
 		parser: p,
+		Chan: c,
 		cfg: map[string]string{},
 	}
 	return
 }
 
+func (sb *SecBench) Log(str string) {
+	if sb.cfg["quiet"] != "true" {
+		fmt.Printf("%s > %s\n", time.Now().String(), str)
+	}
+}
 func (sb *SecBench) Run(cfg *config.Config) {
 	sb.cfg, _ = cfg.Settings()
 	sb.RunBench()
@@ -56,7 +62,7 @@ func (sb *SecBench) Run(cfg *config.Config) {
 func (sb *SecBench) RunBench() {
 	info, err := sb.cli.Info(ctx)
 	if err != nil {
-		log.Printf("Failed to fetch engine info: %s", err.Error())
+		sb.Log(fmt.Sprintf("Failed to fetch engine info: %s", err.Error()))
 		return
 	}
 	cntCfg := &container.Config{
@@ -64,14 +70,8 @@ func (sb *SecBench) RunBench() {
 		AttachStdout: false,
 		AttachStderr: false,
 		Image: imageName,
+		Labels: map[string]string{"docker_bench_security":""},
 	}
-	/*
-	--cap-add audit_control
-	-v /srv/docker:/var/lib/docker
-	-v /var/run/docker.sock:/var/run/docker.sock
-	-v /etc:/etc
-	--label docker_bench_security
-	*/
 	mSock := mount.Mount{
 		Type: mount.TypeBind,
 		Source: "/var/run/docker.sock",
@@ -94,19 +94,30 @@ func (sb *SecBench) RunBench() {
 		Mounts: []mount.Mount{mSock,mEtc, mLib},
 	}
 	networkingConfig := &network.NetworkingConfig{}
-	container, err := sb.cli.ContainerCreate(ctx, cntCfg, hostConfig,
-		networkingConfig, fmt.Sprintf("secbench-%d", time.Now().UnixNano()))
+	cntName := fmt.Sprintf("secbench-%d", time.Now().UnixNano())
+	container, err := sb.cli.ContainerCreate(ctx, cntCfg, hostConfig, networkingConfig, cntName)
 	if err != nil {
-		log.Printf("Failed to create container: %s", err.Error())
+		sb.Log(fmt.Sprintf("Failed to create container: %s", err.Error()))
 		return
 	}
+	if sb.cfg["skip-pull"] != "true" {
+		sb.Log(fmt.Sprintf("Pulling image '%s'", imageName))
+		err = sb.pullImnage()
+		if err != nil {
+			sb.Log(fmt.Sprintf("Error pulling down image: %s", err.Error()))
+		}
+	}
+
+	sb.Log(fmt.Sprintf("Start container '%s' as '%s'", imageName, cntName))
 	err = sb.cli.ContainerStart(ctx, container.ID, types.ContainerStartOptions{})
 	if err != nil {
-		log.Printf("Failed to start container: %s", err.Error())
+		sb.Log(fmt.Sprintf("Failed to start container: %s", err.Error()))
 		return
 	}
 	// Parse log
+	sb.Log("Attaching to log-stream and parsing log")
 	sb.parseLog(container.ID)
+	sb.Log(fmt.Sprintf("Removing container %s", cntName))
 	sb.removeContainer(container.ID)
 }
 
@@ -116,6 +127,7 @@ func (sb *SecBench) removeContainer(cid string) {
 		log.Panic(err.Error())
 	}
 }
+
 func (sb *SecBench) pullImnage() error {
 	cl, err := sb.cli.ImagePull(ctx, "docker/docker-bench-security", types.ImagePullOptions{})
 	defer cl.Close()
@@ -128,27 +140,20 @@ func (sb *SecBench) parseLine(line string) {
 	if err != nil {
 		return
 	}
-	num := ""
+	var num string
+	var rule Rule
 	val, isNum := res["num"]
-
 	if isNum {
 		num = val
-		rule := NewRule(num,res["rule"], res["mode"])
-		sb.skip = rule.Skip(sb.cfg)
-		if !sb.skip {
-			fmt.Printf("Rule  : %s\n", rule.String())
-		}
-		//sb.Results.AddRule(num, res["rule"], "level")
+		rule = NewRule(num, res["rule"], res["mode"])
+		sb.Chan <- rule
 	} else {
-		if !sb.skip {
-			fmt.Printf("Result: %3s | %5s | %s\n", num, res["mode"], res["msg"])
-		}
 		// Add Instance
-		//sb.Results.AddResult(num, res["mode"], res["msg"])
+		inst := NewInstance(res["mode"], res["msg"])
+		sb.Chan <- inst
 	}
-	_ = num
-
 }
+
 func (sb *SecBench) parseLog(CntID string) {
 	logOpts := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Follow: true, Tail: "any", Timestamps: false}
 	reader, err := sb.cli.ContainerLogs(ctx, CntID, logOpts)

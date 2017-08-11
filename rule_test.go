@@ -42,7 +42,7 @@ func TestRule_AddDescription(t *testing.T) {
 
 func TestRule_String(t *testing.T) {
 	r := NewRule("4.1", "Do something", "PASS")
-	exp := "4.1  | Cur:PASS  || Do something"
+	exp := "4.1  | PASS  || Do something"
 	assert.Equal(t, exp, r.String())
 }
 

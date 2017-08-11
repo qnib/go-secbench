@@ -46,7 +46,7 @@ type Rule struct {
 	Description string
 	DesiredMode int
 	CurrentMode int
-	Instances	[]Result
+	Instances	[]Instance
 	Pass		bool
 }
 
@@ -56,12 +56,17 @@ func NewRule(num, desc, mode string) Rule {
 		Description: desc,
 		CurrentMode: ModeToInt(mode),
 		DesiredMode: NIL,
-		Instances: []Result{},
+		Instances: []Instance{},
 	}
 }
 
 func (r *Rule) String() string {
-	return fmt.Sprintf("%-4s | Cur:%-5s || %s", r.Num, ModeToStr(r.CurrentMode), r.Description)
+	res := []string{}
+	res = append(res, fmt.Sprintf("%-4s | %-5s || %s", r.Num, ModeToStr(r.CurrentMode), r.Description))
+	for _, inst := range r.Instances {
+		res = append(res, inst.String())
+	}
+	return strings.Join(res, "\n")
 
 }
 
@@ -73,19 +78,39 @@ func (r *Rule) AddDescription(desc string) {
 	r.Description = desc
 }
 
-func (r Rule) AddResult(res Result) {
-	r.Instances = append(r.Instances, res)
+func (r Rule) AddInstance(inst Instance) Rule {
+	r.Instances = append(r.Instances, inst)
+	return r
 }
 
 func (r *Rule) Skip(cfg map[string]string) bool {
-	modes, ok := cfg["modes-show"]
+	modes, ok := cfg["modes-ignore"]
 	if !ok {
 		return false
 	}
-	for _, mode := range strings.Split(modes, ",") {
-		if mode == ModeToStr(r.CurrentMode) {
-			return false
+	if cfg["skip-empty-rules"] == "true" && len(r.Instances) == 0 {
+		return true
+	}
+	skipR := strings.Split(cfg["rule-numbers-skip"], ",")
+	for _, sR := range skipR {
+		if sR == r.Num {
+			return true
 		}
 	}
-	return true
+	onlyR := strings.Split(cfg["rule-numbers-only"], ",")
+	notSkip := false
+	for _, oR := range onlyR {
+		if oR == r.Num {
+			notSkip = true
+		}
+	}
+	if len(onlyR) >= 1 && !notSkip {
+		return true
+	}
+	for _, mode := range strings.Split(modes, ",") {
+		if mode == ModeToStr(r.CurrentMode) {
+			return true
+		}
+	}
+	return false
 }

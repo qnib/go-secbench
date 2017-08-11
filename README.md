@@ -47,3 +47,15 @@ Rule  : 7.4  | Cur:WARN  || Ensure data exchanged between containers are encrypt
 Result:     |  WARN | Unencrypted overlay network: ingress (swarm)
 Rule  : 7.6  | Cur:WARN  || Ensure swarm manager is run in auto-lock mode
 ```
+
+### Narrow down the Rules
+
+In order to narrow down certain rules, use `--rule-numbers-only`.
+
+```bash
+$ go run main.go --modes-ignore "NOTE,PASS,INFO" --quiet --rule-numbers-only 5.28,7.4
+  5.28 | WARN  || Ensure PIDs cgroup limit is used
+       | WARN  || PIDs limit not set: http.1.dk05f9d6nl81dnongce4msvja
+  7.4  | WARN  || Ensure data exchanged between containers are encrypted on different nodes on the overlay network
+       | WARN  || Unencrypted overlay network: ingress (swarm)
+```
