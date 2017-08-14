@@ -1,0 +1,13 @@
+workspace:
+  base: /drone/src
+  path: /usr/local/src/github.com/qnib/go-secbench
+
+pipeline:
+  alpine:
+    image: qnib/alplain-golang
+    commands:
+      - govendor build -o go-secbench_alpine cmd/main.go
+  x86:
+    image: qnib/uplain-golang
+    commands:
+      - govendor build -o go-secbench_x86 cmd/main.go

@@ -8,54 +8,161 @@ Idealy this script runs periodically and if it founds something, it exists with 
 
 A configuration should be provided, as to allow to configure what rule numbers should be considered.
 
-## Only show WARN
 
-```
-$ go run main.go --modes-show WARN
-Rule  : 1.1  | Cur:WARN  || Ensure a separate partition for containers has been created
-Rule  : 1.5  | Cur:WARN  || Ensure auditing is configured for the Docker daemon
-Rule  : 1.6  | Cur:WARN  || Ensure auditing is configured for Docker files and directories - /var/lib/docker
-Rule  : 2.1  | Cur:WARN  || Ensure network traffic is restricted between containers on the default bridge
-Rule  : 2.8  | Cur:WARN  || Enable user namespace support
-Rule  : 2.11 | Cur:WARN  || Ensure that authorization for Docker client commands is enabled
-Rule  : 2.12 | Cur:WARN  || Ensure centralized and remote logging is configured
-Rule  : 2.13 | Cur:WARN  || Ensure operations on legacy registry (v1) are Disabled
-Rule  : 2.15 | Cur:WARN  || Ensure Userland Proxy is Disabled
-Rule  : 2.17 | Cur:WARN  || Ensure experimental features are avoided in production
-Rule  : 4.1  | Cur:WARN  || Ensure a user for the container has been created
-Result:     |  WARN | Running as root: http.1.i1ck6akamfe9dkpr86ey3cxwa
-Rule  : 4.5  | Cur:WARN  || Ensure Content trust for Docker is Enabled
-Rule  : 5.1  | Cur:WARN  || Ensure AppArmor Profile is Enabled
-Result:     |  WARN | No AppArmorProfile Found: http.1.i1ck6akamfe9dkpr86ey3cxwa
-Rule  : 5.2  | Cur:WARN  || Ensure SELinux security options are set, if applicable
-Result:     |  WARN | No SecurityOptions Found: http.1.i1ck6akamfe9dkpr86ey3cxwa
-Rule  : 5.10 | Cur:WARN  || Ensure memory usage for container is limited
-Result:     |  WARN | Container running without memory restrictions: http.1.i1ck6akamfe9dkpr86ey3cxwa
-Rule  : 5.11 | Cur:WARN  || Ensure CPU priority is set appropriately on the container
-Result:     |  WARN | Container running without CPU restrictions: http.1.i1ck6akamfe9dkpr86ey3cxwa
-Rule  : 5.12 | Cur:WARN  || Ensure the container's root filesystem is mounted as read only
-Result:     |  WARN | Container running with root FS mounted R/W: http.1.i1ck6akamfe9dkpr86ey3cxwa
-Rule  : 5.14 | Cur:WARN  || Ensure 'on-failure' container restart policy is set to '5'
-Result:     |  WARN | MaximumRetryCount is not set to 5: http.1.i1ck6akamfe9dkpr86ey3cxwa
-Rule  : 5.25 | Cur:WARN  || Ensure the container is restricted from acquiring additional privileges
-Result:     |  WARN | Privileges not restricted: http.1.i1ck6akamfe9dkpr86ey3cxwa
-Rule  : 5.28 | Cur:WARN  || Ensure PIDs cgroup limit is used
-Result:     |  WARN | PIDs limit not set: http.1.i1ck6akamfe9dkpr86ey3cxwa
-Rule  : 7.1  | Cur:WARN  || Ensure swarm mode is not Enabled, if not needed
-Rule  : 7.3  | Cur:WARN  || Ensure swarm services are binded to a specific host interface
-Rule  : 7.4  | Cur:WARN  || Ensure data exchanged between containers are encrypted on different nodes on the overlay network
-Result:     |  WARN | Unencrypted overlay network: ingress (swarm)
-Rule  : 7.6  | Cur:WARN  || Ensure swarm manager is run in auto-lock mode
-```
+### Usage
 
-### Narrow down the Rules
-
-In order to narrow down certain rules, use `--rule-numbers-only`.
+THe script can be used to pipe the output of the docker benchmark to.
 
 ```bash
-$ go run main.go --modes-ignore "NOTE,PASS,INFO" --quiet --rule-numbers-only 5.28,7.4
+$ docker run -it --net host --pid host --cap-add audit_control \
+      -e DOCKER_CONTENT_TRUST=$DOCKER_CONTENT_TRUST \
+      -v /var/lib:/var/lib \
+      -v /var/run/docker.sock:/var/run/docker.sock \
+      -v /etc:/etc --label docker_bench_security \
+      docker/docker-bench-security |./go-secbench_Darwin --piped 
+1    | INFO  || Host Configuration
+1.1  | WARN  || Ensure a separate partition for containers has been created
+*snip*
+```
+
+Or it can spin up the container by itself.
+
+```bash
+$ ./go-secbench_Darwin
+  2017-08-14 13:17:28.459777568 +0200 CEST > Pulling image 'docker/docker-bench-security'
+  2017-08-14 13:17:30.044573308 +0200 CEST > Start container 'docker/docker-bench-security' as 'secbench-1502709448333315733'
+  2017-08-14 13:17:30.266071968 +0200 CEST > Attaching to log-stream and parsing log
+  2017-08-14 13:17:54.41579784 +0200 CEST > Removing container secbench-1502709448333315733
+1    | INFO  || Host Configuration
+1.1  | WARN  || Ensure a separate partition for containers has been created
+*snip*
+
+```
+
+## Only show WARN
+
+```bash
+$ cat resources/moby.out|./go-secbench_Darwin --piped --fail-on-warn --rule-numbers-only-regex "5.*"
+  5    | INFO  || Container Runtime
+  5.1  | WARN  || Ensure AppArmor Profile is Enabled
+       | WARN  || No AppArmorProfile Found: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.10 | WARN  || Ensure memory usage for container is limited
+       | WARN  || Container running without memory restrictions: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.11 | WARN  || Ensure CPU priority is set appropriately on the container
+       | WARN  || Container running without CPU restrictions: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.12 | WARN  || Ensure the container's root filesystem is mounted as read only
+       | WARN  || Container running with root FS mounted R/W: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.13 | PASS  || Ensure incoming container traffic is binded to a specific host interface
+  5.14 | WARN  || Ensure 'on-failure' container restart policy is set to '5'
+       | WARN  || MaximumRetryCount is not set to 5: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.15 | PASS  || Ensure the host's process namespace is not shared
+  5.16 | PASS  || Ensure the host's IPC namespace is not shared
+  5.17 | PASS  || Ensure host devices are not directly exposed to containers
+  5.18 | INFO  || Ensure the default ulimit is overwritten at runtime, only if needed
+       | INFO  || Container no default ulimit override: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.19 | PASS  || Ensure mount propagation mode is not set to shared
+  5.2  | WARN  || Ensure SELinux security options are set, if applicable
+       | WARN  || No SecurityOptions Found: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.20 | PASS  || Ensure the host's UTS namespace is not shared
+  5.21 | PASS  || Ensure the default seccomp profile is not Disabled
+  5.22 | NOTE  || Ensure docker exec commands are not used with privileged option
+  5.23 | NOTE  || Ensure docker exec commands are not used with user option
+  5.24 | PASS  || Ensure cgroup usage is confirmed
+  5.25 | WARN  || Ensure the container is restricted from acquiring additional privileges
+       | WARN  || Privileges not restricted: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.26 | PASS  || Ensure container health is checked at runtime
+  5.27 | INFO  || Ensure docker commands always get the latest version of the image
   5.28 | WARN  || Ensure PIDs cgroup limit is used
-       | WARN  || PIDs limit not set: http.1.dk05f9d6nl81dnongce4msvja
+       | WARN  || PIDs limit not set: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.29 | INFO  || Ensure Docker's default bridge docker0 is not used
+       | INFO  || Container in docker0 network:
+  5.3  | PASS  || Ensure Linux Kernel Capabilities are restricted within containers
+  5.30 | PASS  || Ensure the host's user namespaces is not shared
+  5.31 | PASS  || Ensure the Docker socket is not mounted inside any containers
+  5.4  | PASS  || Ensure privileged containers are not used
+  5.5  | PASS  || Ensure sensitive host system directories are not mounted on containers
+  5.6  | PASS  || Ensure ssh is not run within containers
+  5.7  | PASS  || Ensure privileged ports are not mapped within containers
+  5.8  | NOTE  || Ensure only needed ports are open on the container
+  5.9  | PASS  || Ensure the host's network namespace is not shared
+$ echo $?
+  8
+```
+
+
+### Only show warning rules
+
+In order to ignore rules with a given status, use `--modes-ignore`.
+
+```bash
+$ cat resources/moby.out |./go-secbench_Darwin --piped --modes-ignore "INFO,NOTE,PASS"
+  1.1  | WARN  || Ensure a separate partition for containers has been created
+  1.5  | WARN  || Ensure auditing is configured for the Docker daemon
+  1.6  | WARN  || Ensure auditing is configured for Docker files and directories - /var/lib/docker
+  2.1  | WARN  || Ensure network traffic is restricted between containers on the default bridge
+  2.11 | WARN  || Ensure that authorization for Docker client commands is enabled
+  2.12 | WARN  || Ensure centralized and remote logging is configured
+  2.13 | WARN  || Ensure operations on legacy registry (v1) are Disabled
+  2.15 | WARN  || Ensure Userland Proxy is Disabled
+  2.17 | WARN  || Ensure experimental features are avoided in production
+  2.8  | WARN  || Enable user namespace support
+  4.1  | WARN  || Ensure a user for the container has been created
+       | WARN  || Running as root: http.1.9y98tks4opf10pgs4d1i24iyf
+  4.5  | WARN  || Ensure Content trust for Docker is Enabled
+  4.6  | WARN  || Ensure HEALTHCHECK instructions have been added to the container image
+       | WARN  || No Healthcheck found: [dock.gaikai.org/gaikai/docker-visualizer-client:2017-08-03]
+       | WARN  || No Healthcheck found: [gocd/docker-gocd-agent-alpine-3.5:latest]
+       | WARN  || No Healthcheck found: [dock.gaikai.org/snaik/docker-visualizer-client:20170801]
+       | WARN  || No Healthcheck found: [alpine:edge]
+       | WARN  || No Healthcheck found: [qnib/docker-burrow:latest]
+       | WARN  || No Healthcheck found: [test:latest]
+       | WARN  || No Healthcheck found: [qnib/docker-plugin-metrics-opentsdb:latest]
+       | WARN  || No Healthcheck found: [dock.gaikai.org/wrex/big-fat-whale-game:latest]
+       | WARN  || No Healthcheck found: [dock.gaikai.org/htonnies/kafka-websocket:0.0.1]
+       | WARN  || No Healthcheck found: [qnibp/dfile:latest]
+       | WARN  || No Healthcheck found: [qnib/dfile:latest]
+       | WARN  || No Healthcheck found: [dockervisualizerclient_client:latest]
+       | WARN  || No Healthcheck found: [dockervisualizerbackend_backend:latest]
+       | WARN  || No Healthcheck found: [dock.gaikai.org/peifler/docker-visualizer-backend:latest]
+       | WARN  || No Healthcheck found: [node:boron]
+       | WARN  || No Healthcheck found: [dock.gaikai.org/wrex/docker-plugin-metrics-opentsdb:latest]
+       | WARN  || No Healthcheck found: [qnib/prom2json:latest]
+       | WARN  || No Healthcheck found: [qnib/docker-metrics-plugin-opentsdb:latest]
+       | WARN  || No Healthcheck found: [minio/doctor:latest]
+       | WARN  || No Healthcheck found: [gocd/gocd-agent-alpine-3.5:v17.7.0]
+       | WARN  || No Healthcheck found: [gocd/gocd-server:v17.7.0]
+       | WARN  || No Healthcheck found: [golang:alpine]
+       | WARN  || No Healthcheck found: [qnib/alpn-consul:latest]
+       | WARN  || No Healthcheck found: [qnib/alpn-base:latest]
+       | WARN  || No Healthcheck found: [alpine:latest]
+       | WARN  || No Healthcheck found: [alpine:3.5]
+       | WARN  || No Healthcheck found: [postgres:latest]
+       | WARN  || No Healthcheck found: [golang:latest]
+       | WARN  || No Healthcheck found: [ubuntu:latest]
+       | WARN  || No Healthcheck found: [ubuntu:14.04]
+       | WARN  || No Healthcheck found: [busybox:latest]
+       | WARN  || No Healthcheck found: [dock.gaikai.org/mayflower/docker-ls:latest]
+       | WARN  || No Healthcheck found: [dock.gaikai.org/gaikai/docker-visualizer-backend:latest]
+       | WARN  || No Healthcheck found: [ilagnev/alpine-nginx-lua:latest]
+  5.1  | WARN  || Ensure AppArmor Profile is Enabled
+       | WARN  || No AppArmorProfile Found: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.10 | WARN  || Ensure memory usage for container is limited
+       | WARN  || Container running without memory restrictions: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.11 | WARN  || Ensure CPU priority is set appropriately on the container
+       | WARN  || Container running without CPU restrictions: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.12 | WARN  || Ensure the container's root filesystem is mounted as read only
+       | WARN  || Container running with root FS mounted R/W: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.14 | WARN  || Ensure 'on-failure' container restart policy is set to '5'
+       | WARN  || MaximumRetryCount is not set to 5: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.2  | WARN  || Ensure SELinux security options are set, if applicable
+       | WARN  || No SecurityOptions Found: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.25 | WARN  || Ensure the container is restricted from acquiring additional privileges
+       | WARN  || Privileges not restricted: http.1.9y98tks4opf10pgs4d1i24iyf
+  5.28 | WARN  || Ensure PIDs cgroup limit is used
+       | WARN  || PIDs limit not set: http.1.9y98tks4opf10pgs4d1i24iyf
+  7.1  | WARN  || Ensure swarm mode is not Enabled, if not needed
+  7.3  | WARN  || Ensure swarm services are binded to a specific host interface
   7.4  | WARN  || Ensure data exchanged between containers are encrypted on different nodes on the overlay network
        | WARN  || Unencrypted overlay network: ingress (swarm)
+  7.6  | WARN  || Ensure swarm manager is run in auto-lock mode
 ```

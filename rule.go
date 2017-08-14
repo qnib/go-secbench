@@ -85,6 +85,15 @@ func (r Rule) AddInstance(inst Instance) Rule {
 }
 
 func (r *Rule) Skip(cfg map[string]string) bool {
+	modes, ok := cfg["modes-ignore"]
+	if !ok {
+		return false
+	}
+	for _, mode := range strings.Split(modes, ",") {
+		if mode == ModeToStr(r.CurrentMode) {
+			return true
+		}
+	}
 	if cfg["skip-empty-rules"] == "true" && len(r.Instances) == 0 {
 		return true
 	}

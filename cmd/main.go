@@ -33,9 +33,14 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "Run and parse docker security benchmark"
 	app.Usage = "go-secbench [options]"
-	app.Version = "0.0.0"
+	app.Version = secbench.VERSION
 	app.Flags = []cli.Flag{
-		cli.BoolFlag{
+		cli.StringFlag{
+			Name:   "modes-ignore",
+			Value:  "",
+			Usage:  "Modes to ignore during evaluation",
+		 	EnvVar: "SECB_MODES_IGNORE",
+		}, cli.BoolFlag{
 			Name:  "skip-pull",
 			Usage: "Skip pulling dockerbench image",
 			EnvVar: "SECB_SKIP_PULL",
