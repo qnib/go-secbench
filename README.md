@@ -8,10 +8,19 @@ Idealy this script runs periodically and if it founds something, it exists with 
 
 A configuration should be provided, as to allow to configure what rule numbers should be considered.
 
+## Motivation
 
+The idea is to run this script to verify that everything is up-to-date after an deployment or periodically.<br>
+By using `--fail-on-warn` the script will return a non-zero error-code if warnings occur.
+
+The filter options can be used to trim down to the rules, which are applicable in a given environment.
+
+```bash
+$
+```
 ### Usage
 
-THe script can be used to pipe the output of the docker benchmark to.
+The script can be used to pipe the output of the docker benchmark to.
 
 ```bash
 $ docker run -it --net host --pid host --cap-add audit_control \
@@ -19,16 +28,18 @@ $ docker run -it --net host --pid host --cap-add audit_control \
       -v /var/lib:/var/lib \
       -v /var/run/docker.sock:/var/run/docker.sock \
       -v /etc:/etc --label docker_bench_security \
-      docker/docker-bench-security |./go-secbench_Darwin --piped 
+      docker/docker-bench-security |./go-secbench_Darwin --piped --fail-on-warn
 1    | INFO  || Host Configuration
 1.1  | WARN  || Ensure a separate partition for containers has been created
 *snip*
+$ echo $?
+25
 ```
 
 Or it can spin up the container by itself.
 
 ```bash
-$ ./go-secbench_Darwin
+$ ./go-secbench_Darwin --fail-on-warn
   2017-08-14 13:17:28.459777568 +0200 CEST > Pulling image 'docker/docker-bench-security'
   2017-08-14 13:17:30.044573308 +0200 CEST > Start container 'docker/docker-bench-security' as 'secbench-1502709448333315733'
   2017-08-14 13:17:30.266071968 +0200 CEST > Attaching to log-stream and parsing log
@@ -36,7 +47,8 @@ $ ./go-secbench_Darwin
 1    | INFO  || Host Configuration
 1.1  | WARN  || Ensure a separate partition for containers has been created
 *snip*
-
+$ echo $?
+25
 ```
 
 ## Only show WARN
