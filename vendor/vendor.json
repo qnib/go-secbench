@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "Pc2ORQp+VY3Un/dkh4QwLC7R6lE=",
+			"path": "github.com/BurntSushi/toml",
+			"revision": "a368813c5e648fee92e5f6c30e3944ff9d5e8895",
+			"revisionTime": "2017-06-26T11:06:00Z"
+		},
+		{
 			"checksumSHA1": "o/3cn04KAiwC7NqNVvmfVTD+hgA=",
 			"origin": "github.com/docker/docker/vendor/github.com/Microsoft/go-winio",
 			"path": "github.com/Microsoft/go-winio",
@@ -14,6 +20,12 @@
 			"path": "github.com/ahmetalpbalkan/dlog",
 			"revision": "4fb5f8204f26b45ef2445bd98bc04fccf04a3e0a",
 			"revisionTime": "2017-01-05T20:53:44Z"
+		},
+		{
+			"checksumSHA1": "FErdaG0vJrWecQqeMJKWS+alUKA=",
+			"path": "github.com/codegangsta/cli",
+			"revision": "f017f86fccc5a039a98f23311f34fdf78b014f78",
+			"revisionTime": "2017-08-13T14:59:49Z"
 		},
 		{
 			"checksumSHA1": "mrz/kicZiUaHxkyfvC/DyQcr8Do=",
@@ -204,6 +216,18 @@
 			"revisionTime": "2016-07-08T17:25:13Z"
 		},
 		{
+			"checksumSHA1": "ImX1uv6O09ggFeBPUJJ2nu7MPSA=",
+			"path": "github.com/ghodss/yaml",
+			"revision": "0ca9ea5df5451ffdf184b4428c902747c2c11cd7",
+			"revisionTime": "2017-03-27T23:54:44Z"
+		},
+		{
+			"checksumSHA1": "87LEfpY9cOk9CP7pWyIbmQ/6enU=",
+			"path": "github.com/go-ini/ini",
+			"revision": "c787282c39ac1fc618827141a1f762240def08a3",
+			"revisionTime": "2017-08-13T05:22:30Z"
+		},
+		{
 			"checksumSHA1": "AS/9n/tRsnwrlFum6AZoHM7glP8=",
 			"origin": "github.com/docker/docker/vendor/github.com/gogo/protobuf/proto",
 			"path": "github.com/gogo/protobuf/proto",
@@ -271,6 +295,12 @@
 			"revisionTime": "2017-07-11T19:53:01Z"
 		},
 		{
+			"checksumSHA1": "m8hYD/alsufIYIM7sR06wbL+dKo=",
+			"path": "github.com/zpatrick/go-config",
+			"revision": "710646a45582fde23bf77bacbc2f38008dc7ffc2",
+			"revisionTime": "2016-11-18T20:29:31Z"
+		},
+		{
 			"checksumSHA1": "8wbHSD24FGJUJDS1F6wbtEt8z+w=",
 			"path": "golang.org/x/crypto/ssh/terminal",
 			"revision": "b176d7def5d71bdd214203491f89843ed217f420",
@@ -310,6 +340,12 @@
 			"path": "golang.org/x/sys/windows",
 			"revision": "e42485b6e20ae7d2304ec72e535b103ed350cc02",
 			"revisionTime": "2017-08-09T17:40:02Z"
+		},
+		{
+			"checksumSHA1": "RDJpJQwkF012L6m/2BJizyOksNw=",
+			"path": "gopkg.in/yaml.v2",
+			"revision": "eb3733d160e74a9c7e442f435eb3bea458e1d19f",
+			"revisionTime": "2017-08-12T16:00:11Z"
 		}
 	],
 	"rootPath": "github.com/qnib/go-secbench"

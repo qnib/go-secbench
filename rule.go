@@ -3,6 +3,7 @@ package secbench
 import (
 	"fmt"
 	"strings"
+	"regexp"
 )
 
 const (
@@ -84,10 +85,6 @@ func (r Rule) AddInstance(inst Instance) Rule {
 }
 
 func (r *Rule) Skip(cfg map[string]string) bool {
-	modes, ok := cfg["modes-ignore"]
-	if !ok {
-		return false
-	}
 	if cfg["skip-empty-rules"] == "true" && len(r.Instances) == 0 {
 		return true
 	}
@@ -97,20 +94,35 @@ func (r *Rule) Skip(cfg map[string]string) bool {
 			return true
 		}
 	}
-	onlyR := strings.Split(cfg["rule-numbers-only"], ",")
+	skipRre := cfg["rule-numbers-skip-regex"]
+	if  skipRre != "" {
+		m, err := regexp.Match("^"+skipRre, []byte(r.Num))
+		if m && err == nil {
+			return true
+		}
+	}
 	notSkip := false
+	onlyR := []string{}
+	for _, item := range strings.Split(cfg["rule-numbers-only"], ",") {
+		if item == "" {
+			continue
+		}
+		onlyR = append(onlyR, item)
+	}
 	for _, oR := range onlyR {
 		if oR == r.Num {
 			notSkip = true
 		}
 	}
-	if len(onlyR) >= 1 && !notSkip {
-		return true
-	}
-	for _, mode := range strings.Split(modes, ",") {
-		if mode == ModeToStr(r.CurrentMode) {
+	onlyRre := cfg["rule-numbers-only-regex"]
+	if  onlyRre != "" {
+		m, err := regexp.Match("^"+onlyRre, []byte(r.Num))
+		if !m && err == nil {
 			return true
 		}
+	}
+	if len(onlyR) >= 1 && !notSkip {
+		return true
 	}
 	return false
 }

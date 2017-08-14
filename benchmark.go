@@ -17,6 +17,7 @@ import (
 	"bufio"
 	"github.com/lunixbochs/vtclean"
 	"github.com/zpatrick/go-config"
+	"os"
 )
 
 const (
@@ -56,10 +57,15 @@ func (sb *SecBench) Log(str string) {
 }
 func (sb *SecBench) Run(cfg *config.Config) {
 	sb.cfg, _ = cfg.Settings()
-	sb.RunBench()
+	sin, _ := cfg.BoolOr("piped", false)
+	if sin {
+		sb.ReadStdin()
+	} else {
+		sb.RunContainer()
+	}
 }
 
-func (sb *SecBench) RunBench() {
+func (sb *SecBench) RunContainer() {
 	info, err := sb.cli.Info(ctx)
 	if err != nil {
 		sb.Log(fmt.Sprintf("Failed to fetch engine info: %s", err.Error()))
@@ -119,6 +125,14 @@ func (sb *SecBench) RunBench() {
 	sb.parseLog(container.ID)
 	sb.Log(fmt.Sprintf("Removing container %s", cntName))
 	sb.removeContainer(container.ID)
+}
+
+func (sb SecBench) ReadStdin() {
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		line := scanner.Text()
+		sb.parseLine(line)
+	}
 }
 
 func (sb *SecBench) removeContainer(cid string) {

@@ -1,6 +1,10 @@
 package secbench
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+	"sort"
+)
 
 type Store struct {
 	Chan <- chan interface{}
@@ -41,10 +45,23 @@ func (s *Store) Loop(done chan error) {
 }
 
 func (s *Store) Eval(cfg map[string]string) {
-	for _, rule := range s.Rules {
+	warn_cnt := 0
+	nums := []string{}
+	for n, _ := range s.Rules {
+		nums = append(nums, n)
+	}
+	sort.Strings(nums)
+	for _, num := range nums {
+		rule := s.Rules[num]
 		if rule.Skip(cfg) {
 			continue
 		}
+		if rule.CurrentMode == WARN {
+			warn_cnt++
+		}
 		fmt.Println(rule.String())
+	}
+	if cfg["fail-on-warn"] == "true" {
+		os.Exit(warn_cnt)
 	}
 }
