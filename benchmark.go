@@ -22,7 +22,7 @@ import (
 
 const (
 	imageName = "docker/docker-bench-security"
-	VERSION = "0.0.0"
+	VERSION = "0.1.0"
 )
 
 var (
