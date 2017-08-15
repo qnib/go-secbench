@@ -15,9 +15,6 @@ By using `--fail-on-warn` the script will return a non-zero error-code if warnin
 
 The filter options can be used to trim down to the rules, which are applicable in a given environment.
 
-```bash
-$
-```
 ### Usage
 
 The script can be used to pipe the output of the docker benchmark to.
